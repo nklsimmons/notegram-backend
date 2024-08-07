@@ -1,0 +1,16 @@
+services:
+  mongodb:
+    image: mongo:6-jammy
+    container_name: notegram-db
+    ports:
+      - '27117:27017'
+    volumes:
+      - dbdata6:/data/db
+    #  - ./mongodb/mongod.conf:/etc/mongod.conf
+    # entrypoint: ["mongod", "--auth", "--config", "/etc/mongod.conf"]
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: username
+    #   MONGO_INITDB_ROOT_PASSWORD: password
+
+volumes:
+  dbdata6:
