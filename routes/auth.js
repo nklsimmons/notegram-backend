@@ -1,10 +1,7 @@
 var express = require('express');
 var router = express.Router();
-var dotenv = require('dotenv');
 const jwt = require('jsonwebtoken');
-
 var dbConn = require('../services/db');
-var ObjectId = require('mongodb').ObjectId;
 
 function generateAccessToken(username) {
   return jwt.sign({username}, process.env.TOKEN_SECRET, { expiresIn: '86400s' });

@@ -21,4 +21,9 @@ app.use('/api/users', usersRouter);
 app.use('/api/notes', notesRouter);
 app.use('/api/auth', authRouter);
 
+// app.use((err, req, res, next) => {
+//   res.status(err.status || 500)
+//   res.send(err);
+// })
+
 module.exports = app;

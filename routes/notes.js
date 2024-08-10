@@ -4,7 +4,6 @@ var dbConn = require('../services/db');
 const jwt = require('jsonwebtoken');
 
 async function authenticateToken(req, res, next) {
-
   const authHeader = req.headers['authorization']
   const token = authHeader && authHeader.split(' ')[1]
 
@@ -12,47 +11,53 @@ async function authenticateToken(req, res, next) {
     if (err) return res.sendStatus(403)
 
     req.user = user
-
-    // next()
   });
 }
 
 /* GET notes listing. */
 router.get('/', async function(req, res, next) {
-  await authenticateToken(req, res, next);
+  try {
+    await authenticateToken(req, res, next);
 
-  const db = await dbConn;
+    const db = await dbConn;
 
-  const notesCollection = db.collection("notes")
+    const notesCollection = db.collection("notes")
 
-  const query = { user: req.user.username };
-  const options = {};
+    const query = { user: req.user.username };
+    const options = {};
 
-  const result = await notesCollection.find(query, options).toArray();
+    const result = await notesCollection.find(query, options).toArray();
 
-  res.send(result);
+    res.send(result);
+  } catch(err) {
+    next(err);
+  }
 });
 
 /* POST note. */
 router.post('/', async function(req, res, next) {
-  await authenticateToken(req, res, next);
+  try {
+    await authenticateToken(req, res, next);
 
-  const user = req.user.username;
+    const user = req.user.username;
 
-  const db = await dbConn;
+    const db = await dbConn;
 
-  const notesCollection = db.collection("notes")
+    const notesCollection = db.collection("notes")
 
-  const newNote = {
-    user: user,
-    text: req.body.text,
-    active: 1,
-    notebook: null,
+    const newNote = {
+      user: user,
+      text: req.body.text,
+      active: 1,
+      notebook: null,
+    }
+
+    await notesCollection.insertOne(newNote);
+
+    res.sendStatus(201);
+  } catch(err) {
+    next(err);
   }
-
-  await notesCollection.insertOne(newNote);
-
-  res.sendStatus(201);
 });
 
 module.exports = router;
