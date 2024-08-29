@@ -1,25 +1,13 @@
 var express = require('express');
 var router = express.Router();
 var dbConn = require('../services/db');
-const jwt = require('jsonwebtoken');
+var passport = require('passport');
 var ObjectId = require('mongodb').ObjectId;
 
-async function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
-
-  return await jwt.verify(token, process.env.TOKEN_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403)
-
-    req.user = user
-  });
-}
 
 /* GET notes listing. */
-router.get('/', async function(req, res, next) {
+router.get('/', passport.authenticate('jwt', { session: false }), async function(req, res, next) {
   try {
-    await authenticateToken(req, res, next);
-
     const sortDirection = req.query.sort == 'asc' ? 1 : -1;
     const sortField = req.query.sortField ?? '_id';
 
@@ -47,12 +35,8 @@ router.get('/', async function(req, res, next) {
 /* POST note. */
 router.post('/', async function(req, res, next) {
   try {
-    await authenticateToken(req, res, next);
-
     const user = req.user.username;
-
     const db = await dbConn;
-
     const notesCollection = db.collection("notes")
 
     const newNote = {
@@ -73,14 +57,10 @@ router.post('/', async function(req, res, next) {
 /* DELETE note. */
 router.delete('/:id', async function(req, res, next) {
   try {
-    await authenticateToken(req, res, next);
-
     const noteId = req.params.id;
-
     const user = req.user.username;
 
     const db = await dbConn;
-
     const notesCollection = db.collection("notes")
 
     const query = {

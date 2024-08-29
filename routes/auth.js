@@ -1,69 +1,68 @@
 var express = require('express');
 var router = express.Router();
-const jwt = require('jsonwebtoken');
+var jwt = require('jsonwebtoken');
+var crypto = require('crypto');
 var dbConn = require('../services/db');
 
-function generateAccessToken(username) {
-  return jwt.sign({username}, process.env.TOKEN_SECRET, { expiresIn: '86400s' });
+
+function generateAccessToken(user) {
+  return jwt.sign({user}, process.env.TOKEN_SECRET, { expiresIn: '86400s' });
 }
 
-// function somethingsomethingpassword
+function verifyPassword(password, hashedPassword, salt) {
+  const pwhash = crypto
+    .pbkdf2Sync(password, salt, 310000, 32, 'sha256')
+    .toString('hex');
 
-// TODO: Export these into service methods, which return promises
-// https://www.toptal.com/express-js/routes-js-promises-error-handling
-/* POST new user */
-router.post('/register', async (req, res, next) => {
-  try {
-    const db = await dbConn;
+  return crypto.timingSafeEqual(Buffer.from(pwhash), Buffer.from(hashedPassword));
+}
 
-    const coll = db.collection("users");
+/* POST login */
+router.post('/login', async (req, res, next) => {
+  const username = req.body.username;
+  const password = req.body.password;
 
-    const newUser = {
-      username: req.body.username,
-      password: req.body.password,
-    }
+  const db = await dbConn;
+  const coll = db.collection("users")
+  const foundUser = await coll.findOne({ username: username }, {});
 
-    coll.insertOne(newUser);
+  if(foundUser) {
+    [ hashedPassword, passwordSalt ] = foundUser.password.split('.');
+    let result = verifyPassword(password, hashedPassword, passwordSalt);
 
-    res.send({
-      id: newUser._id,
-      username: newUser.username,
-      token: generateAccessToken(newUser.username),
-    });
-  } catch(err) {
-    next(err);
+    if(result)
+      return res.send(generateAccessToken(String(foundUser._id)));
   }
+
+  res.status(401).send('Unauthorized');
 });
 
-/* POST retrieve JWT */
-router.post('/login', async (req, res, next) => {
-  try {
-    const db = await dbConn;
+/* POST signup */
+router.post('/register', async (req, res, next) => {
+  const username = req.body.username;
+  const password = req.body.password;
 
-    const coll = db.collection("users");
+  // TODO: unique login
 
-    const user = {
-      username: req.body.username,
-      password: req.body.password,
-    }
+  const db = await dbConn;
+  const coll = db.collection("users")
 
-    const foundUser = await coll.findOne(user);
+  const pwsalt = crypto.randomBytes(16).toString('hex');
+  const pwhash = crypto
+    .pbkdf2Sync(password, pwsalt, 310000, 32, 'sha256')
+    .toString('hex');
 
-    if(!foundUser) {
-      res.status(404);
-      res.send("");
-      return;
-    }
+  const insertResult = await coll.insertOne({
+    username: username,
+    password: pwhash + '.' + pwsalt,
+  });
 
-    res.send({
-      id: foundUser._id,
-      username: foundUser.username,
-      token: generateAccessToken(foundUser.username),
-    });
-
-  } catch(err) {
-    next(err)
+  const user = {
+    id: insertResult.insertedId,
+    username: username,
   }
+
+  res.send(user);
 });
 
 module.exports = router;
