@@ -31,10 +31,10 @@ router.post('/login', async (req, res, next) => {
     let result = verifyPassword(password, hashedPassword, passwordSalt);
 
     if(result)
-      return res.send(generateAccessToken(String(foundUser._id)));
+      return res.send({ token: generateAccessToken(String(foundUser._id)) });
   }
 
-  res.status(401).send('Unauthorized');
+  res.status(401).send({ error: 'Unauthorized' });
 });
 
 /* POST signup */
@@ -42,10 +42,14 @@ router.post('/register', async (req, res, next) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  // TODO: unique login
-
   const db = await dbConn;
   const coll = db.collection("users")
+
+  const foundUser = await coll.findOne({ username: username }, {});
+
+  if(foundUser) {
+    return res.status(400).send({ error: 'Username already exists' });
+  }
 
   const pwsalt = crypto.randomBytes(16).toString('hex');
   const pwhash = crypto
@@ -57,12 +61,7 @@ router.post('/register', async (req, res, next) => {
     password: pwhash + '.' + pwsalt,
   });
 
-  const user = {
-    id: insertResult.insertedId,
-    username: username,
-  }
-
-  res.send(user);
+  res.send({ token: generateAccessToken(insertResult.insertedId) });
 });
 
 module.exports = router;

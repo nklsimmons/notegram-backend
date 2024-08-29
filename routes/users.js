@@ -5,6 +5,7 @@ var dbConn = require('../services/db');
 const jwt = require('jsonwebtoken');
 var ObjectId = require('mongodb').ObjectId;
 
+
 async function authenticateToken(req, res, next) {
 
   const authHeader = req.headers['authorization']
@@ -59,24 +60,24 @@ router.get('/:userId', async function(req, res, next) {
   }
 });
 
-/* POST new user */
-router.post('/', async function(req, res, next) {
-  try {
-    const db = await dbConn;
+// /* POST new user */
+// router.post('/', async function(req, res, next) {
+//   try {
+//     const db = await dbConn;
 
-    const coll = db.collection("users");
+//     const coll = db.collection("users");
 
-    const newUser = {
-      username: req.body.username,
-      password: req.body.password,
-    }
+//     const newUser = {
+//       username: req.body.username,
+//       password: req.body.password,
+//     }
 
-    coll.insertOne(newUser)
+//     coll.insertOne(newUser)
 
-    res.send(newUser);
-  } catch(err) {
-    next(err);
-  }
-});
+//     res.send(newUser);
+//   } catch(err) {
+//     next(err);
+//   }
+// });
 
 module.exports = router;

@@ -33,7 +33,7 @@ router.get('/', passport.authenticate('jwt', { session: false }), async function
 });
 
 /* POST note. */
-router.post('/', async function(req, res, next) {
+router.post('/', passport.authenticate('jwt', { session: false }), async function(req, res, next) {
   try {
     const user = req.user.username;
     const db = await dbConn;
@@ -55,7 +55,7 @@ router.post('/', async function(req, res, next) {
 });
 
 /* DELETE note. */
-router.delete('/:id', async function(req, res, next) {
+router.delete('/:id', passport.authenticate('jwt', { session: false }), async function(req, res, next) {
   try {
     const noteId = req.params.id;
     const user = req.user.username;
@@ -82,7 +82,7 @@ router.delete('/:id', async function(req, res, next) {
 });
 
 /* POST note tag. */
-router.post('/:id/tags', async function(req, res, next) {
+router.post('/:id/tags', passport.authenticate('jwt', { session: false }), async function(req, res, next) {
   try {
     await authenticateToken(req, res, next);
 
