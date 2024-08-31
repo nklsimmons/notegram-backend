@@ -22,8 +22,8 @@ router.get('/', passport.authenticate('jwt', { session: false }), async function
     })
     .then(result => {
       return result
-      .sort(sorting)
-      .toArray();
+        .sort(sorting)
+        .toArray();
     })
     .then(foundNotes => {
       res.send(foundNotes);
@@ -106,6 +106,39 @@ router.post('/:id/tags', passport.authenticate('jwt', { session: false }), async
     })
     .then(updatedNote => {
       res.send(updatedNote);
+    })
+    .catch(err => {
+      res.status(400).send({ error: String(err) });
+    })
+});
+
+
+/* GET note tag. */
+router.get('/tags', passport.authenticate('jwt', { session: false }), async function(req, res, next) {
+
+  let notesCollection;
+
+  getCollection("notes")
+    .then(coll => {
+      notesCollection = coll;
+
+      return coll.aggregate([
+        { $match: { user: req.user.username } },
+        { $group: { _id: "$tags" } },
+      ], {});
+    })
+    .then(result => {
+      return result.toArray();
+    })
+    .then(notesTags => {
+      let allTags = [];
+
+      notesTags.forEach(tags => {
+        allTags = allTags.concat(tags._id);
+      });
+      const allUniqueTags = [...new Set(allTags)];
+
+      res.send(allUniqueTags);
     })
     .catch(err => {
       res.status(400).send({ error: String(err) });
