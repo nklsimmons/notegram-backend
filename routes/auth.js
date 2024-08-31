@@ -31,7 +31,10 @@ router.post('/login', async (req, res, next) => {
     let result = verifyPassword(password, hashedPassword, passwordSalt);
 
     if(result)
-      return res.send({ token: generateAccessToken(String(foundUser._id)) });
+      return res.send({
+        token: generateAccessToken(String(foundUser._id)),
+        username: foundUser.username
+      });
   }
 
   res.status(401).send({ error: 'Unauthorized' });
@@ -61,7 +64,10 @@ router.post('/register', async (req, res, next) => {
     password: pwhash + '.' + pwsalt,
   });
 
-  res.send({ token: generateAccessToken(insertResult.insertedId) });
+  res.send({
+    token: generateAccessToken(insertResult.insertedId),
+    username: foundUser.username,
+  });
 });
 
 module.exports = router;
