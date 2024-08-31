@@ -3,9 +3,11 @@ var mongodb = require('mongodb');
 
 dotenv.config();
 
-const uri = process.env.MONGO_URI || "";
-const client = new mongodb.MongoClient(uri);
+module.exports = async function(collectionName) {
+  const uri = process.env.MONGO_URI || "";
+  const client = new mongodb.MongoClient(uri);
 
-const db = client.db("notegram");
-
-module.exports = db;
+  return client
+    .db("notegram")
+    .collection(collectionName);
+};

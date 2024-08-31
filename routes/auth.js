@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var jwt = require('jsonwebtoken');
 var crypto = require('crypto');
-var dbConn = require('../services/db');
+var getCollection = require('../services/db');
 
 
 function generateAccessToken(user) {
@@ -22,22 +22,29 @@ router.post('/login', async (req, res, next) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  const db = await dbConn;
-  const coll = db.collection("users")
-  const foundUser = await coll.findOne({ username: username }, {});
+  getCollection("users")
+    .then(coll => {
+      return coll.findOne({ username: username }, {});
+    })
+    .then(foundUser => {
+      if(!foundUser) throw new Error('Unauthorized');
 
-  if(foundUser) {
-    [ hashedPassword, passwordSalt ] = foundUser.password.split('.');
-    let result = verifyPassword(password, hashedPassword, passwordSalt);
+      console.log(foundUser);
 
-    if(result)
-      return res.send({
+      [ hashedPassword, passwordSalt ] = foundUser.password.split('.');
+      let result = verifyPassword(password, hashedPassword, passwordSalt);
+
+      if(!result) throw new Error('Unauthorized');
+
+      res.send({
         token: generateAccessToken(String(foundUser._id)),
         username: foundUser.username
       });
-  }
-
-  res.status(401).send({ error: 'Unauthorized' });
+    })
+    .catch(err => {
+      res.status(401).send({ error: String(err) });
+    })
+  ;
 });
 
 /* POST signup */
@@ -45,29 +52,35 @@ router.post('/register', async (req, res, next) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  const db = await dbConn;
-  const coll = db.collection("users")
+  let usersCollection;
 
-  const foundUser = await coll.findOne({ username: username }, {});
+  getCollection("users")
+    .then(coll => {
+      usersCollection = coll;
+      return coll.findOne({ username: username }, {});
+    })
+    .then(foundUser => {
+      if(foundUser) throw new Error('Username already exists');
 
-  if(foundUser) {
-    return res.status(400).send({ error: 'Username already exists' });
-  }
+      const pwsalt = crypto.randomBytes(16).toString('hex');
+      const pwhash = crypto
+        .pbkdf2Sync(password, pwsalt, 310000, 32, 'sha256')
+        .toString('hex');
 
-  const pwsalt = crypto.randomBytes(16).toString('hex');
-  const pwhash = crypto
-    .pbkdf2Sync(password, pwsalt, 310000, 32, 'sha256')
-    .toString('hex');
+      const insertResult = usersCollection.insertOne({
+        username: username,
+        password: pwhash + '.' + pwsalt,
+      });
 
-  const insertResult = await coll.insertOne({
-    username: username,
-    password: pwhash + '.' + pwsalt,
-  });
-
-  res.send({
-    token: generateAccessToken(insertResult.insertedId),
-    username: foundUser.username,
-  });
+      res.send({
+        token: generateAccessToken(insertResult.insertedId),
+        username: username,
+      });
+    })
+    .catch(err => {
+      res.status(400).send({ error: String(err) });
+    })
+  ;
 });
 
 module.exports = router;
