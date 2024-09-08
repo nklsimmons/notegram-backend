@@ -4,16 +4,19 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors');
 var passport = require('passport');
-var dbConn = require('./services/db');
+var UserRepository = require('./repositories/UserRepository');
+var dotenv = require('dotenv');
 
 var JwtStrategy = require('passport-jwt').Strategy,
     ExtractJwt = require('passport-jwt').ExtractJwt;
-var ObjectId = require('mongodb').ObjectId;
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var notesRouter = require('./routes/notes');
 var authRouter = require('./routes/auth');
+var ObjectId = require('mongodb').ObjectId;
+
+dotenv.config();
 
 var app = express();
 
@@ -29,13 +32,16 @@ opts.jwtFromRequest = ExtractJwt.fromAuthHeaderAsBearerToken();
 opts.secretOrKey = process.env.TOKEN_SECRET;
 
 passport.use(new JwtStrategy(opts, async function(jwt_payload, done) {
-  const db = await dbConn;
-  const coll = db.collection("users")
+  const repo = new UserRepository();
 
-  const foundUser = await coll.findOne({ _id: new ObjectId(jwt_payload.user) });
+  const foundUser = await repo.getUserById(jwt_payload.user)
+
   // TODO: Expiry?
 
-  done(null, { id: String(foundUser._id), username: foundUser.username });
+  if (foundUser)
+    return done(null, { id: foundUser._id, username: foundUser.username });
+
+  return done(null, false);
 }));
 
 app.use('/', indexRouter);

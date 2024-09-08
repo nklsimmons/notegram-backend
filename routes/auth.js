@@ -2,7 +2,7 @@ var express = require('express');
 var router = express.Router();
 var jwt = require('jsonwebtoken');
 var crypto = require('crypto');
-var dbConn = require('../services/db');
+var UserRepository = require('../repositories/UserRepository');
 
 
 function generateAccessToken(user) {
@@ -22,9 +22,8 @@ router.post('/login', async (req, res, next) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  const db = await dbConn;
-  const coll = db.collection("users")
-  const foundUser = await coll.findOne({ username: username }, {});
+  const repository = new UserRepository();
+  const foundUser = await repository.getUser({ username: username });
 
   if(foundUser) {
     [ hashedPassword, passwordSalt ] = foundUser.password.split('.');
@@ -45,10 +44,8 @@ router.post('/register', async (req, res, next) => {
   const username = req.body.username;
   const password = req.body.password;
 
-  const db = await dbConn;
-  const coll = db.collection("users")
-
-  const foundUser = await coll.findOne({ username: username }, {});
+  const repository = new UserRepository();
+  const foundUser = await repository.getUser({ username: username });
 
   if(foundUser) {
     return res.status(400).send({ error: 'Username already exists' });
@@ -59,14 +56,14 @@ router.post('/register', async (req, res, next) => {
     .pbkdf2Sync(password, pwsalt, 310000, 32, 'sha256')
     .toString('hex');
 
-  const insertResult = await coll.insertOne({
+  const insertResult = await repository.createUser({
     username: username,
     password: pwhash + '.' + pwsalt,
   });
 
   res.send({
     token: generateAccessToken(insertResult.insertedId),
-    username: foundUser.username,
+    username: username,
   });
 });
 

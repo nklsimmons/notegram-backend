@@ -1,6 +1,5 @@
 var express = require('express');
 var router = express.Router();
-var dbConn = require('../services/db');
 var ObjectId = require('mongodb').ObjectId;
 var passport = require('passport');
 
