@@ -16,6 +16,10 @@ module.exports = class UserRepository {
     return await User.findById(id);
   }
 
+  async getUser(query) {
+    return await User.findOne(query);
+  }
+
   async getAllUsers() {
     const result = await User.find();
     return result;
